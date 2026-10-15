@@ -1,0 +1,62 @@
+# ------------------------------------------------------------------
+# MMart — PHP e-commerce
+# ------------------------------------------------------------------
+
+# Local environment / secrets (config.php is env-overridable)
+.env
+.env.*
+!.env.example
+
+# ------------------------------------------------------------------
+# Database — local data, generated/seeded at runtime
+# ------------------------------------------------------------------
+# SQLite database is created automatically on first request
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+database/*.db-journal
+database/*.db-wal
+database/*.db-shm
+
+# ------------------------------------------------------------------
+# Uploads — keep the folder + placeholder, ignore user-uploaded images
+# ------------------------------------------------------------------
+assets/uploads/*
+!assets/uploads/product-placeholder.svg
+!assets/uploads/.gitkeep
+
+# ------------------------------------------------------------------
+# PHP / Composer
+# ------------------------------------------------------------------
+/vendor/
+composer.lock
+composer.phar
+
+# ------------------------------------------------------------------
+# Logs & caches
+# ------------------------------------------------------------------
+*.log
+logs/
+tmp/
+cache/
+.php-cs-fixer.cache
+.phpunit.result.cache
+
+# ------------------------------------------------------------------
+# Editors & IDEs
+# ------------------------------------------------------------------
+.vscode/
+.idea/
+.qoder/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# ------------------------------------------------------------------
+# OS junk
+# ------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
