@@ -8,15 +8,25 @@
 !.env.example
 
 # ------------------------------------------------------------------
+# Markdown / docs — don't push
+# ------------------------------------------------------------------
+*.md
+*.markdown
+
+# ------------------------------------------------------------------
 # Database — local data, generated/seeded at runtime
 # ------------------------------------------------------------------
-# SQLite database is created automatically on first request
-database/*.db
-database/*.sqlite
-database/*.sqlite3
-database/*.db-journal
-database/*.db-wal
-database/*.db-shm
+# Whole database folder (SQLite db + schema/dump files)
+database/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# SQL files anywhere (schema, dumps, migrations)
+*.sql
 
 # ------------------------------------------------------------------
 # Uploads — keep the folder + placeholder, ignore user-uploaded images

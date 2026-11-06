@@ -10,7 +10,12 @@ function admin_is_logged_in(): bool
 function require_admin(): void
 {
     if (!admin_is_logged_in()) {
-        header('Location: login.php');
+        global $config;
+        header('Location: ' . ($config['admin_login'] ?? 'login.php'));
         exit;
     }
+
+    // Guarded pages must never be cached or restored from browser back/forward cache.
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
 }

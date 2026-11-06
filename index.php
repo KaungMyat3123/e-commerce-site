@@ -29,7 +29,7 @@ require __DIR__ . '/includes/header.php';
         <div class="row align-items-center py-5">
             <div class="col-lg-7">
                 <h1 class="display-5 fw-bold">Everything you need, delivered fast.</h1>
-                <p class="lead mb-4">Browse hundreds of quality products across electronics, fashion, home &amp; living and sports.</p>
+                <p class="lead mb-4">Browse hundreds of quality products across fashion, apparel, and lifestyle essentials. &amp; living and sports.</p>
                 <a href="shop.php" class="btn btn-primary btn-lg me-2">Shop Now</a>
                 <a href="about.php" class="btn btn-outline-light btn-lg">Learn More</a>
             </div>

@@ -19,10 +19,56 @@ if (!$product) {
 }
 
 $related = $conn->prepare(
-    'SELECT product_id, name, price, stock, image_url FROM Products WHERE category_id = ? AND product_id <> ? ORDER BY RANDOM() LIMIT 4'
+    'SELECT product_id, name, price, stock, image_url FROM Products WHERE category_id = ? AND product_id <> ? ORDER BY ' . db_random_order() . ' LIMIT 4'
 );
 $related->execute([$product['category_id'], $product['product_id']]);
 $relatedProducts = $related->fetchAll();
+
+// ---- Reviews: submit handler ----
+$reviewErrors = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_review') {
+    csrf_verify();
+    $reviewerName = trim($_POST['reviewer_name'] ?? '');
+    $comment      = trim($_POST['comment'] ?? '');
+
+    if ($reviewerName === '' || mb_strlen($reviewerName) > 100) {
+        $reviewErrors[] = 'Please enter your name (max 100 characters).';
+    }
+    if ($comment === '' || mb_strlen($comment) > 4000) {
+        $reviewErrors[] = 'Please write your review (max 4000 characters).';
+    }
+
+    if (!$reviewErrors) {
+        $stmt = $conn->prepare("INSERT INTO Reviews (product_id, reviewer_name, comment, status) VALUES (?, ?, ?, 'pending')");
+        $stmt->execute([$product['product_id'], $reviewerName, $comment]);
+        $_SESSION['review_ids'][] = (int) $conn->lastInsertId();
+        flash('success', 'Thank you! Your review has been submitted and is awaiting admin approval.');
+        header('Location: product-detail.php?id=' . (int) $product['product_id']);
+        exit;
+    }
+}
+
+// ---- Reviews: public approved list + this visitor's own reviews ----
+$stmt = $conn->prepare(
+    "SELECT reviewer_name, comment, created_at FROM Reviews
+     WHERE product_id = ? AND status = 'approved'
+     ORDER BY created_at DESC, review_id DESC"
+);
+$stmt->execute([$product['product_id']]);
+$approvedReviews = $stmt->fetchAll();
+
+$myReviews = [];
+$myIds = array_values(array_filter(array_map('intval', $_SESSION['review_ids'] ?? [])));
+if ($myIds) {
+    $placeholders = implode(',', array_fill(0, count($myIds), '?'));
+    $stmt = $conn->prepare(
+        "SELECT review_id, comment, status, created_at FROM Reviews
+         WHERE product_id = ? AND review_id IN ($placeholders)
+         ORDER BY created_at DESC, review_id DESC"
+    );
+    $stmt->execute(array_merge([$product['product_id']], $myIds));
+    $myReviews = $stmt->fetchAll();
+}
 
 $pageTitle  = $product['name'];
 $activePage = 'shop';
@@ -80,6 +126,75 @@ require __DIR__ . '/includes/header.php';
 
             <h5 class="fw-bold">Description</h5>
             <p class="text-muted"><?= nl2br(e($product['description'] ?? '')) ?></p>
+        </div>
+    </div>
+
+    <hr class="my-5">
+    <h3 class="h5 fw-bold mb-4">Customer Reviews</h3>
+    <div class="row gy-4">
+        <div class="col-lg-7">
+            <?php if ($myReviews): ?>
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header fw-bold bg-light">Your reviews</div>
+                    <ul class="list-group list-group-flush">
+                        <?php foreach ($myReviews as $r): ?>
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <p class="mb-1 text-muted"><?= nl2br(e($r['comment'])) ?></p>
+                                    <?php if ($r['status'] === 'approved'): ?>
+                                        <span class="badge bg-success text-nowrap">Admin approved your review</span>
+                                    <?php elseif ($r['status'] === 'declined'): ?>
+                                        <span class="badge bg-danger text-nowrap">Declined</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning text-dark text-nowrap">Pending</span>
+                                    <?php endif; ?>
+                                </div>
+                                <span class="small text-muted"><?= e(date('d M Y, h:i A', strtotime($r['created_at']))) ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($approvedReviews): ?>
+                <?php foreach ($approvedReviews as $r): ?>
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <span class="fw-semibold"><i class="bi bi-person-circle me-1 text-primary"></i><?= e($r['reviewer_name']) ?></span>
+                            <span class="small text-muted"><?= e(date('d M Y', strtotime($r['created_at']))) ?></span>
+                        </div>
+                        <p class="mb-0 mt-1 text-muted"><?= nl2br(e($r['comment'])) ?></p>
+                    </div>
+                <?php endforeach; ?>
+            <?php elseif (!$myReviews): ?>
+                <p class="text-muted">No reviews yet. Be the first to share your thoughts!</p>
+            <?php endif; ?>
+        </div>
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h4 class="h6 mb-3">Write a Review</h4>
+                    <?php if ($reviewErrors): ?>
+                        <div class="alert alert-danger py-2">
+                            <ul class="mb-0 ps-3"><?php foreach ($reviewErrors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
+                        </div>
+                    <?php endif; ?>
+                    <form method="post" novalidate>
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="add_review">
+                        <div class="mb-3">
+                            <label for="reviewer_name" class="form-label">Your Name</label>
+                            <input type="text" class="form-control" id="reviewer_name" name="reviewer_name" required maxlength="100" value="<?= e($_POST['reviewer_name'] ?? '') ?>">
+                        </div>
+                        <div class="mb-3">
+                            <label for="comment" class="form-label">Your Review</label>
+                            <textarea class="form-control" id="comment" name="comment" rows="4" required maxlength="4000"><?= e($_POST['comment'] ?? '') ?></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-chat-left-text me-1"></i>Submit Review</button>
+                        <p class="small text-muted mt-2 mb-0">Reviews are published after admin approval.</p>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 

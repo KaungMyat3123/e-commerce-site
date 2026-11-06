@@ -27,6 +27,7 @@ $base = '../';
             <a class="nav-link <?= ($adminActive ?? '') === 'orders' ? 'active' : '' ?>" href="orders.php"><i class="bi bi-receipt me-2"></i>Orders</a>
             <a class="nav-link <?= ($adminActive ?? '') === 'payments' ? 'active' : '' ?>" href="payments.php"><i class="bi bi-credit-card me-2"></i>Payment Methods</a>
             <a class="nav-link <?= ($adminActive ?? '') === 'inquiries' ? 'active' : '' ?>" href="inquiries.php"><i class="bi bi-envelope me-2"></i>Inquiries</a>
+            <a class="nav-link <?= ($adminActive ?? '') === 'reviews' ? 'active' : '' ?>" href="reviews.php"><i class="bi bi-star me-2"></i>Reviews</a>
             <a class="nav-link" href="<?= $base ?>index.php" target="_blank"><i class="bi bi-box-arrow-up-right me-2"></i>View Storefront</a>
         </nav>
     </aside>

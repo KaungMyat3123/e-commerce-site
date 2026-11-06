@@ -14,7 +14,7 @@ if (in_array($status, ['Pending', 'Confirmed', 'Shipped', 'Cancelled'], true)) {
     $params[] = $status;
 }
 if ($search !== '') {
-    $where[] = '(o.customer_name LIKE ? OR o.customer_email LIKE ? OR CAST(o.order_id AS TEXT) LIKE ?)';
+    $where[] = '(o.customer_name LIKE ? OR o.customer_email LIKE ? OR CAST(o.order_id AS CHAR) LIKE ?)';
     $like = '%' . $search . '%';
     array_push($params, $like, $like, $like);
 }

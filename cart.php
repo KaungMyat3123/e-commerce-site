@@ -19,13 +19,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } elseif ((int) $product['stock'] <= 0) {
                     flash('error', '"' . $product['name'] . '" is out of stock.');
                 } else {
-                    $qty = max(1, min((int) ($_POST['quantity'] ?? 1), (int) $product['stock']));
-                    cart_add($id, $qty);
+                    $qty   = max(1, min((int) ($_POST['quantity'] ?? 1), (int) $product['stock']));
+                    $color = trim($_POST['color'] ?? '');
+                    $size  = trim($_POST['size'] ?? '');
+                    cart_add($id, $qty, $color, $size);
                     flash('success', '"' . $product['name'] . '" added to your cart.');
                 }
                 break;
             case 'update':
-                cart_update($id, (int) ($_POST['quantity'] ?? 0));
+                $qty   = (int) ($_POST['quantity'] ?? 0);
+                $color = trim($_POST['color'] ?? '');
+                $size  = trim($_POST['size'] ?? '');
+                cart_update($id, $qty, $color, $size);
                 flash('success', 'Cart updated.');
                 break;
             case 'remove':
@@ -71,9 +76,10 @@ require __DIR__ . '/includes/header.php';
                         <tr>
                             <th>Product</th>
                             <th class="text-center">Price</th>
-                            <th class="text-center" style="width:130px">Qty</th>
+                            <th class="text-center" style="width:200px">Size and Color</th>
+                            <th class="text-center" style="width:110px">Qty</th>
                             <th class="text-end">Subtotal</th>
-                            <th class="text-center" style="width:70px"></th>
+                            <th class="text-center" style="width:110px">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -83,23 +89,38 @@ require __DIR__ . '/includes/header.php';
                                     <img src="<?= e($item['image_url'] ?: 'assets/uploads/product-placeholder.svg') ?>" alt="" width="48" height="48" class="rounded object-fit-cover">
                                     <a href="product-detail.php?id=<?= (int) $item['product_id'] ?>" class="text-decoration-none"><?= e($item['name']) ?></a>
                                 </td>
-                                <td class="text-center"><?= currency($item['price']) ?></td>
+                                <td class="text-center"><?= currency(round($item['price'])) ?></td>
+                                
+                                <!-- Size and Color Textboxes (Form inside row) -->
                                 <td>
                                     <form method="post" class="d-flex gap-1">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="action" value="update">
                                         <input type="hidden" name="product_id" value="<?= (int) $item['product_id'] ?>">
-                                        <input type="number" name="quantity" min="1" max="<?= (int) $item['stock'] ?>" value="<?= (int) $item['quantity'] ?>" class="form-control form-control-sm text-center">
-                                        <button class="btn btn-sm btn-outline-secondary" title="Update"><i class="bi bi-arrow-clockwise"></i></button>
-                                    </form>
+                                        
+                                        <!-- Size Textbox -->
+                                        <input type="text" name="size" value="<?= e($item['size'] ?? '') ?>" placeholder="Size" class="form-control form-control-sm text-center" style="width: 70px;">
+                                        
+                                        <!-- Color Textbox -->
+                                        <input type="text" name="color" value="<?= e($item['color'] ?? '') ?>" placeholder="Color" class="form-control form-control-sm text-center" style="width: 90px;">
                                 </td>
-                                <td class="text-end fw-semibold"><?= currency($item['line_total']) ?></td>
+
+                                <!-- Quantity Input -->
+                                <td>
+                                        <input type="number" name="quantity" min="1" max="<?= (int) $item['stock'] ?>" value="<?= (int) $item['quantity'] ?>" class="form-control form-control-sm text-center">
+                                </td>
+
+                                <td class="text-end fw-semibold"><?= currency(round($item['line_total'])) ?></td>
+
+                                <!-- Actions (Update & Remove) -->
                                 <td class="text-center">
-                                    <form method="post">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Update"><i class="bi bi-arrow-clockwise"></i></button>
+                                    </form>
+                                    <form method="post" class="d-inline ms-1">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="action" value="remove">
                                         <input type="hidden" name="product_id" value="<?= (int) $item['product_id'] ?>">
-                                        <button class="btn btn-sm btn-outline-danger" title="Remove"><i class="bi bi-trash"></i></button>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove"><i class="bi bi-trash"></i></button>
                                     </form>
                                 </td>
                             </tr>
@@ -117,10 +138,10 @@ require __DIR__ . '/includes/header.php';
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between mb-2"><span>Items (<?= cart_count() ?>)</span><span><?= currency($total) ?></span></div>
+                        <div class="d-flex justify-content-between mb-2"><span>Items (<?= cart_count() ?>)</span><span><?= currency(round($total)) ?></span></div>
                         <div class="d-flex justify-content-between mb-3"><span>Shipping</span><span class="text-success">Free</span></div>
                         <hr class="my-2">
-                        <div class="d-flex justify-content-between fw-bold fs-5"><span>Total</span><span><?= currency($total) ?></span></div>
+                        <div class="d-flex justify-content-between fw-bold fs-5"><span>Total</span><span><?= currency(round($total)) ?></span></div>
                         <a href="checkout.php" class="btn btn-primary w-100 mt-3">Proceed to Checkout <i class="bi bi-arrow-right ms-1"></i></a>
                     </div>
                 </div>

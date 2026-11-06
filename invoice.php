@@ -29,6 +29,54 @@ $itemsStmt = $conn->prepare(
 $itemsStmt->execute([$orderId]);
 $items = $itemsStmt->fetchAll();
 
+// ---- Reviews: purchase rating on the invoice ----
+$orderProductIds = array_values(array_unique(array_filter(array_column($items, 'product_id'))));
+
+$reviewErrors = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_review') {
+    csrf_verify();
+    $productId    = (int) ($_POST['product_id'] ?? 0);
+    $reviewerName = trim($_POST['reviewer_name'] ?? '');
+    $comment      = trim($_POST['comment'] ?? '');
+
+    if (!in_array($productId, $orderProductIds, true)) {
+        $reviewErrors[] = 'That product is not part of this order.';
+    }
+    if ($reviewerName === '' || mb_strlen($reviewerName) > 100) {
+        $reviewErrors[] = 'Please enter your name (max 100 characters).';
+    }
+    if ($comment === '' || mb_strlen($comment) > 4000) {
+        $reviewErrors[] = 'Please write your review (max 4000 characters).';
+    }
+
+    if (!$reviewErrors) {
+        $stmt = $conn->prepare("INSERT INTO Reviews (product_id, reviewer_name, comment, status) VALUES (?, ?, ?, 'pending')");
+        $stmt->execute([$productId, $reviewerName, $comment]);
+        $_SESSION['review_ids'][] = (int) $conn->lastInsertId();
+        flash('success', 'Thank you! Your review has been submitted and is awaiting admin approval.');
+        header('Location: invoice.php?order=' . $orderId);
+        exit;
+    }
+}
+
+$myOrderReviews = [];
+$myIds = array_values(array_filter(array_map('intval', $_SESSION['review_ids'] ?? [])));
+if ($myIds && $orderProductIds) {
+    $phProducts = implode(',', array_fill(0, count($orderProductIds), '?'));
+    $phReviews  = implode(',', array_fill(0, count($myIds), '?'));
+    $stmt = $conn->prepare(
+        "SELECT review_id, product_id, comment, status, created_at FROM Reviews
+         WHERE product_id IN ($phProducts) AND review_id IN ($phReviews)
+         ORDER BY created_at DESC, review_id DESC"
+    );
+    $stmt->execute(array_merge($orderProductIds, $myIds));
+    $myOrderReviews = $stmt->fetchAll();
+}
+$reviewsByProduct = [];
+foreach ($myOrderReviews as $r) {
+    $reviewsByProduct[(int) $r['product_id']][] = $r;
+}
+
 $pageTitle = 'Invoice #' . $orderId;
 $activePage = '';
 require __DIR__ . '/includes/header.php';
@@ -112,6 +160,62 @@ require __DIR__ . '/includes/header.php';
             <p class="small text-muted mt-4 mb-0">Thank you for shopping with us! Keep this invoice as proof of purchase. Goods may be exchanged within 7 days with the original voucher.</p>
         </div>
     </div>
+
+    <?php if (empty($_GET['print']) && $orderProductIds): ?>
+        <div class="card shadow invoice-card mx-auto mt-4">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-1"><i class="bi bi-star-half me-1 text-warning"></i>Rate Your Purchases</h5>
+                <p class="text-muted small mb-4">Share your experience — reviews are published on the product page after admin approval.</p>
+
+                <?php if ($reviewErrors): ?>
+                    <div class="alert alert-danger py-2">
+                        <ul class="mb-0 ps-3"><?php foreach ($reviewErrors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul>
+                    </div>
+                <?php endif; ?>
+
+                <div class="row g-3">
+                    <?php foreach ($items as $item): if (empty($item['product_id'])) continue; ?>
+                        <div class="col-md-6">
+                            <div class="border rounded p-3 h-100">
+                                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                                    <strong><?= e($item['name']) ?></strong>
+                                    <a class="small" href="product-detail.php?id=<?= (int) $item['product_id'] ?>">view product</a>
+                                </div>
+
+                                <?php foreach ($reviewsByProduct[(int) $item['product_id']] ?? [] as $r): ?>
+                                    <div class="d-flex justify-content-between align-items-start gap-2 bg-light rounded p-2 mb-2">
+                                        <p class="small text-muted mb-0"><?= nl2br(e($r['comment'])) ?></p>
+                                        <?php if ($r['status'] === 'approved'): ?>
+                                            <span class="badge bg-success text-nowrap">Admin approved your review</span>
+                                        <?php elseif ($r['status'] === 'declined'): ?>
+                                            <span class="badge bg-danger text-nowrap">Declined</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-warning text-dark text-nowrap">Pending</span>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+
+                                <form method="post" novalidate>
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="action" value="add_review">
+                                    <input type="hidden" name="product_id" value="<?= (int) $item['product_id'] ?>">
+                                    <div class="mb-2">
+                                        <input type="text" class="form-control form-control-sm" name="reviewer_name" required maxlength="100"
+                                               value="<?= e($_POST['reviewer_name'] ?? $order['customer_name']) ?>" aria-label="Your name">
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <textarea class="form-control form-control-sm" name="comment" rows="2" required maxlength="4000"
+                                                  placeholder="How was this product?"><?= e($_POST['comment'] ?? '') ?></textarea>
+                                        <button type="submit" class="btn btn-primary btn-sm text-nowrap"><i class="bi bi-send me-1"></i>Submit</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 
     <?php if (empty($_GET['print'])): ?>
         <div class="text-center mt-4 no-print">

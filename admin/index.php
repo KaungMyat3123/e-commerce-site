@@ -39,7 +39,7 @@ $badgeMap = ['Pending' => 'warning', 'Confirmed' => 'success', 'Shipped' => 'pri
     <div class="col-sm-6 col-xl-3">
         <div class="card stat-card text-bg-primary h-100"><div class="card-body">
             <div class="d-flex justify-content-between"><span>Total Sales</span><i class="bi bi-currency-dollar fs-4"></i></div>
-            <h3 class="mt-2 mb-0"><?= currency($stats['total_sales']) ?></h3>
+            <h3 class="mt-2 mb-0"><?= currency(round($stats['total_sales'])) ?></h3>
         </div></div>
     </div>
     <div class="col-sm-6 col-xl-3">
@@ -100,7 +100,7 @@ $badgeMap = ['Pending' => 'warning', 'Confirmed' => 'success', 'Shipped' => 'pri
                             <tr>
                                 <td><a href="order-detail.php?id=<?= (int) $o['order_id'] ?>">#<?= (int) $o['order_id'] ?></a></td>
                                 <td><?= e($o['customer_name']) ?></td>
-                                <td class="text-end"><?= currency($o['total_amount']) ?></td>
+                                <td class="text-end"><?= currency(round($o['total_amount'])) ?></td>
                                 <td><span class="badge bg-<?= $badgeMap[$o['order_status']] ?? 'secondary' ?>"><?= e($o['order_status']) ?></span></td>
                                 <td class="small text-muted"><?= e(date('d M Y', strtotime($o['created_at']))) ?></td>
                             </tr>

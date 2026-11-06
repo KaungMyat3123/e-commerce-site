@@ -19,7 +19,7 @@
                 <ul class="list-unstyled small">
                     <li><a class="link-secondary text-decoration-none" href="about.php">About Us</a></li>
                     <li><a class="link-secondary text-decoration-none" href="contact.php">Contact Us</a></li>
-                    <li><a class="link-secondary text-decoration-none" href="admin/login.php">Admin Panel</a></li>
+                    <li><a class="link-secondary text-decoration-none" href="admin/<?= e($config['admin_login']) ?>">Admin Panel</a></li>
                 </ul>
             </div>
             <div class="col-md-3">
